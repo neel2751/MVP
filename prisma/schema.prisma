@@ -1,0 +1,123 @@
+// Users table: all types of users including superadmin, sales, company-admin, branch-admin, tenants, landlords, contractors
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  password    String
+  isActive    Boolean      @default(true)
+  isVerified  Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  roles       UserRole[]   // links to roles
+  companyUsers CompanyUser[]
+}
+
+// Roles Table
+model Role {
+  id          String      @id @default(cuid())
+  name        String      @unique // e.g., superadmin, sales, company-admin, branch-admin
+  description String?
+  users       UserRole[]
+
+  CompanyUser CompanyUser[]
+
+  RolePermission RolePermission[]
+}
+
+
+model Permission {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "create_company", "view_branch", "edit_property"
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role       @relation(fields: [roleId], references: [id])
+  roleId       String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  permissionId String
+}
+
+// Pivot table: Users ↔ Roles (for global or company-specific roles)
+model UserRole {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    String
+  company   Company? @relation(fields: [companyId], references: [id])
+  companyId String?  // nullable for superadmin (global)
+}
+
+// Companies Table
+model Company {
+  id                  String       @id @default(cuid())
+  name                String
+  domain              String       @unique
+  isActive            Boolean      @default(true)
+  stripeCustomerId    String?      // Stripe customer ID
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  branches            Branch[]
+  companyUsers        CompanyUser[]
+  subscriptions       Subscription[]
+
+  UserRole UserRole[]
+}
+
+// Branches Table
+model Branch {
+  id          String     @id @default(cuid())
+  name        String
+  company     Company    @relation(fields: [companyId], references: [id])
+  companyId   String
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// Company ↔ Users table (users belonging to companies)
+model CompanyUser {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    String
+}
+
+// Subscription Plans Table
+model Plan {
+  id                      String   @id @default(cuid())
+  name                    String
+  description             String?
+  monthlyPrice             Float
+  yearlyPrice              Float
+  monthlyStripePlanId      String   // Stripe plan ID for monthly subscription
+  yearlyStripePlanId       String   // Stripe plan ID for yearly subscription
+  maxBranches              Int
+  maxPropertiesPerBranch   Int
+  extraBranchPrice         Float?   // extra charge per branch if exceeding limit
+  extraPropertyPrice       Float?   // extra charge per property if exceeding limit
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  subscriptions           Subscription[]
+}
+
+// Company Subscriptions
+model Subscription {
+  id         String   @id @default(cuid())
+  company    Company  @relation(fields: [companyId], references: [id])
+  companyId  String
+  plan       Plan     @relation(fields: [planId], references: [id])
+  planId     String
+  startDate  DateTime
+  endDate    DateTime
+  status     String   // active, expired, canceled
+  isTrial    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
