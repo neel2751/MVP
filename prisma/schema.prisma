@@ -1,3 +1,14 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
 // Users table: all types of users including superadmin, sales, company-admin, branch-admin, tenants, landlords, contractors
 model User {
   id          String       @id @default(cuid())
