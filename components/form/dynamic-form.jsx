@@ -39,7 +39,12 @@ function checkConditions(conditions, watchedValues, logic = "AND") {
   return logic === "AND" ? results.every(Boolean) : results.some(Boolean);
 }
 
-export function DynamicForm({ fields = [], defaultValues = {}, onSubmit }) {
+export function DynamicForm({
+  fields = [],
+  defaultValues = {},
+  onSubmit,
+  submitButtonLabel = "Submit",
+}) {
   const methods = useForm({ mode: "onBlur", defaultValues });
   const { control } = methods;
 
@@ -124,7 +129,7 @@ export function DynamicForm({ fields = [], defaultValues = {}, onSubmit }) {
     <FormProvider {...methods}>
       <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
         {fields.map(renderField)}
-        <Button type="submit">Submit</Button>
+        <Button type="submit">{submitButtonLabel}</Button>
       </form>
     </FormProvider>
   );
