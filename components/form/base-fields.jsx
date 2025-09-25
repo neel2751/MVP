@@ -16,7 +16,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Check, ChevronsUpDown, Calendar, Eye, EyeOff, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -38,6 +37,7 @@ import bytes from "bytes";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Switch } from "../ui/switch";
 
 export function BaseInput({ type = "text", value, onChange, ...props }) {
   const [showPassword, setShowPassword] = React.useState(false);
@@ -481,5 +481,14 @@ export function BaseMultiSelect({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+export function BaseSwitch({ checked, onChange, label, className, ...props }) {
+  return (
+    <div className={cn("flex items-center", className)}>
+      <Switch checked={checked} onCheckedChange={onChange} {...props} />
+      {label && <span className="ml-2 text-sm font-medium">{label}</span>}
+    </div>
   );
 }
