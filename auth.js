@@ -21,19 +21,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         // Get user + roles + company memberships
         const user = await prisma.user.findUnique({
-          where: { email },
+          where: { email: email },
           include: {
             roles: {
-              include: { role: true }, // global roles (like superadmin)
+              // global roles (UserRole)
+              where: { companyId: null },
+              include: {
+                role: {
+                  include: {
+                    RolePermission: {
+                      include: { permission: true },
+                    },
+                  },
+                },
+              },
             },
             companyUsers: {
+              // companies this user belongs to
               include: {
-                company: true,
-                role: true, // the role inside that company
+                company: {
+                  include: {
+                    subscriptions: true,
+                  },
+                },
+                role: {
+                  include: {
+                    RolePermission: {
+                      include: { permission: true },
+                    },
+                  },
+                },
               },
             },
           },
         });
+
+        console.log("Found user:", user);
 
         if (!user) throw new Error("No user found with the given email");
         if (!user.isActive)
@@ -44,32 +67,51 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) throw new Error("Incorrect password");
 
-        // Build list of companies
+        // global roles/permissions
+        const globalRoles = user.roles.map((r) => r.role.name);
+        const globalPermissions = user.roles.flatMap((r) =>
+          r.role.RolePermission.map((rp) => rp.permission.name)
+        );
+
+        // companies with their permissions
         const companies = user.companyUsers.map((cu) => ({
           companyId: cu.company.id,
           companyName: cu.company.name,
-          companyActive: cu.company.isActive,
+          isActive: cu.company.isActive,
           role: cu.role.name,
+          permissions: cu.role.RolePermission.map((rp) => rp.permission.name),
+          subscription:
+            cu.company.subscriptions.length > 0
+              ? cu.company.subscriptions[0] // pick latest or active
+              : null,
         }));
 
-        return {
+        const response = {
           id: user.id,
           name: user.name,
           email: user.email,
-          globalRoles: user.roles.map((r) => r.role.name), // e.g., ['superadmin']
+          globalRoles, // e.g., ['superadmin']
+          globalPermissions, // e.g., ['manage_superadmin_users', ...]
           companies, // list of companies they belong to
         };
+
+        console.log("Auth response:", response);
+
+        return response;
       },
     }),
   ],
 
   callbacks: {
-    async jwt({ token, trigger, session }) {
+    async jwt({ token, trigger, user }) {
       // When user logs in initially
-      if (session?.user) {
-        token.id = session.user.id;
-        token.globalRoles = session.user.globalRoles;
-        token.companies = session.user.companies;
+      if (user) {
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.globalRoles = user.globalRoles;
+        token.companies = user.companies;
+        token.globalPermissions = user.globalPermissions;
       }
 
       // When client calls `session.update`
@@ -81,9 +123,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      session.user.id = token.id;
+      if (token) session.user.id = token.id;
+      session.user.email = token.email;
+      session.user.name = token.name;
       session.user.globalRoles = token.globalRoles;
       session.user.companies = token.companies;
+      session.user.globalPermissions = token.globalPermissions;
 
       // Expose active company
       session.user.selectedCompanyId = token.selectedCompanyId || null;

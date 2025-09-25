@@ -21,6 +21,10 @@ export async function middleware(req) {
     return NextResponse.redirect(url);
   }
 
+  if (Array.isArray(token.globalRoles) && token.globalRoles.length > 0) {
+    return NextResponse.next();
+  }
+
   const companies = token.companies || [];
   const selectedCompanyId = token.selectedCompanyId;
 
