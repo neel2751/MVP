@@ -2,10 +2,12 @@
 
 import * as React from "react";
 import {
+  AudioWaveform,
   Bell,
   BookOpen,
   Bot,
   Command,
+  GalleryVerticalEnd,
   Home,
   LifeBuoy,
   Send,
@@ -26,6 +28,7 @@ import Link from "next/link";
 import { NavMain } from "./nav-main";
 import { NavSecondary } from "./nav-secondary";
 import { NavUser } from "./nav-user";
+import { TeamSwitcher } from "./company-switcher";
 import { useSession } from "next-auth/react";
 import { useFetchQuery } from "@/hooks/use-query";
 import { getPermissions } from "@/lib/permissions";
@@ -96,6 +99,24 @@ const sidebarItems = [
   },
 ];
 
+const teams = [
+  {
+    name: "Acme Inc",
+    logo: GalleryVerticalEnd,
+    plan: "Enterprise",
+  },
+  {
+    name: "Acme Corp.",
+    logo: AudioWaveform,
+    plan: "Startup",
+  },
+  {
+    name: "Evil Corp.",
+    logo: Command,
+    plan: "Free",
+  },
+];
+
 export function AppSidebar({ ...props }) {
   const { data: session } = useSession();
   const { data } = useFetchQuery({
@@ -115,21 +136,7 @@ export function AppSidebar({ ...props }) {
   return (
     <Sidebar collapsible="icon" variant="inset" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
-                </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={filteredSidebarItems} />

@@ -11,11 +11,16 @@ import {
 // import { createSubscriptionPlan } from "@/actions/billings/subscription-plans";
 import { toast } from "sonner";
 import { DynamicForm } from "../form/dynamic-form";
+import {
+  createSubscriptionPlan,
+  updateSubscriptionPlan,
+} from "@/actions/plan/subscription-plan";
 
 export function CreateSubscriptionPlanDialog({
   open,
   onOpenChange,
   onPlanCreated,
+  initialValues = {},
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const fields = [
@@ -50,13 +55,13 @@ export function CreateSubscriptionPlanDialog({
       validationOptions: { required: "Max branches is required", min: 1 },
     },
     {
-      name: "maxProperties",
+      name: "maxPropertiesPerBranch",
       type: "number",
       label: "Max Properties",
       validationOptions: { required: "Max properties is required", min: 1 },
     },
     {
-      name: "additionalBranchPrice",
+      name: "extraBranchPrice",
       type: "number",
       label: "Additional Branch Price (£)",
       validationOptions: {
@@ -65,13 +70,19 @@ export function CreateSubscriptionPlanDialog({
       },
     },
     {
-      name: "additionalPropertyPrice",
+      name: "extraPropertyPrice",
       type: "number",
       label: "Additional Property Price (£)",
       validationOptions: {
         required: "Additional property price is required",
         min: 0,
       },
+    },
+    {
+      name: "trialPeriodDays",
+      type: "number",
+      label: "Trial Period (Days)",
+      validationOptions: { required: "Trial period is required", min: 0 },
     },
     { name: "isActive", type: "switch", label: "Enable this plan" },
     {
@@ -88,7 +99,12 @@ export function CreateSubscriptionPlanDialog({
   const handleSubmit = async (data) => {
     try {
       setIsLoading(true);
-      const result = await createSubscriptionPlan(data);
+      let result;
+      if (initialValues?.id) {
+        result = await updateSubscriptionPlan(data, initialValues?.id);
+      } else {
+        result = await createSubscriptionPlan(data, initialValues?.id);
+      }
       if (result.success) {
         onPlanCreated(result.plan);
         onOpenChange(false);
@@ -96,6 +112,7 @@ export function CreateSubscriptionPlanDialog({
         toast.error(result.error || "Failed to create subscription plan");
       }
     } catch (error) {
+      console.error("Error creating subscription plan:", error);
       toast.error("An unexpected error occurred");
     } finally {
       setIsLoading(false);
@@ -116,6 +133,8 @@ export function CreateSubscriptionPlanDialog({
           fields={fields}
           onSubmit={handleSubmit}
           isLoading={isLoading}
+          submitButtonLabel={initialValues?.id ? "Update Plan" : "Create Plan"}
+          defaultValues={initialValues}
         />
       </DialogContent>
     </Dialog>

@@ -4,22 +4,43 @@ import { NextResponse } from "next/server";
 export async function middleware(req) {
   const url = req.nextUrl.clone();
   const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  const pathname = url.pathname;
 
-  // Allow public paths
+  // 1. Allow public/asset paths (API, static files, favicon)
+  // NOTE: Your config matcher should handle most of this, but keeping API/asset checks here is safer.
   if (
-    url.pathname.startsWith("/auth") ||
-    url.pathname.startsWith("/api") ||
-    url.pathname.startsWith("/_next") ||
-    url.pathname.startsWith("/favicon.ico")
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico")
   ) {
     return NextResponse.next();
   }
 
+  // 2. Handle NOT LOGGED IN / Redirect to /auth
+  const isAuthPage = pathname.startsWith("/auth");
+
   if (!token) {
-    // Not logged in
+    // If user is not logged in AND they are already on an auth page, allow them to stay.
+    if (isAuthPage) {
+      return NextResponse.next();
+    }
+
+    // Otherwise, redirect them to the /auth page
     url.pathname = "/auth";
     return NextResponse.redirect(url);
   }
+
+  // 3. Handle LOGGED IN but accessing auth pages (redirect to dashboard)
+  if (
+    isAuthPage &&
+    !pathname.includes("select-company") &&
+    !pathname.includes("no-company")
+  ) {
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  // ... (Keep the rest of your original logic unchanged) ...
 
   if (Array.isArray(token.globalRoles) && token.globalRoles.length > 0) {
     return NextResponse.next();
@@ -30,18 +51,16 @@ export async function middleware(req) {
 
   if (companies.length === 0) {
     // User not linked to any company
+    if (pathname === "/auth/no-company") return NextResponse.next(); // Prevent loop
     url.pathname = "/auth/no-company";
     return NextResponse.redirect(url);
   }
 
-  if (companies.length === 1 && !selectedCompanyId) {
-    // Auto-select if only one company
-    url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
-  }
+  // ... (other checks that redirect to auth pages must also check if the user is already there) ...
 
   if (companies.length > 1 && !selectedCompanyId) {
     // Show selection page if multiple companies
+    if (pathname === "/auth/select-company") return NextResponse.next(); // Prevent loop
     url.pathname = "/auth/select-company";
     return NextResponse.redirect(url);
   }
@@ -53,40 +72,22 @@ export async function middleware(req) {
 
   if (!activeCompany) {
     // Invalid selected company
+    if (pathname === "/auth/select-company") return NextResponse.next(); // Prevent loop
     url.pathname = "/auth/select-company";
     return NextResponse.redirect(url);
   }
 
-  // Check if company is active
-  if (!activeCompany.isActive) {
-    url.pathname = "/auth/company-inactive";
-    return NextResponse.redirect(url);
-  }
-
-  // Check subscription / free trial
-  const now = new Date();
-  const subscription = activeCompany.subscription;
-
-  if (!subscription || subscription.status === "canceled") {
-    url.pathname = "/auth/subscription-expired";
-    return NextResponse.redirect(url);
-  }
-
-  if (subscription.status === "expired") {
-    url.pathname = "/auth/subscription-expired";
-    return NextResponse.redirect(url);
-  }
-
-  if (subscription.isTrial && new Date(subscription.endDate) < now) {
-    url.pathname = "/auth/trial-expired";
-    return NextResponse.redirect(url);
-  }
+  // ... (rest of your valid checks) ...
 
   // Everything is valid, continue
   return NextResponse.next();
 }
 
-// Apply to all routes except public assets and auth pages
+// ⚠️ Configuration adjustment: Ensure your matcher excludes ALL auth pages completely.
+// If you use Next-Auth, Next.js handles the /api/auth routes automatically.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|auth).*)"],
+  matcher: [
+    /* Apply to all paths except: */
+    "/((?!api|_next/static|_next/image|favicon.ico|auth/.*|auth$).*)",
+  ],
 };

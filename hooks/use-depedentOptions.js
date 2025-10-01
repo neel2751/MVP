@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 export function useDependentOptions(field, methods) {
   const [options, setOptions] = useState(field.options || []);
   const prevValues = useRef([]);
+  // options in the form of [{label, value}, ...]
 
   useEffect(() => {
     if (field.dependField && typeof field.loadOptions === "function") {
@@ -22,18 +23,17 @@ export function useDependentOptions(field, methods) {
         methods.setValue(field.name, "");
 
         // call loadOptions
-        field
-          .loadOptions(
-            dependFields.length === 1
-              ? dependValues[0]
-              : Object.fromEntries(
-                  dependFields.map((k, i) => [k, dependValues[i]])
-                )
-          )
-          .then(setOptions);
+        field.loadOptions(
+          dependFields.length === 1
+            ? dependValues[0]
+            : Object.fromEntries(
+                dependFields.map((k, i) => [k, dependValues[i]])
+              )
+        );
 
         prevValues.current = dependValues;
       }
+      dependFields.map((key) => methods.watch(key));
     }
   }, [methods.watch(field.dependField)]);
 

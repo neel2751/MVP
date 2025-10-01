@@ -15,32 +15,32 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { CreateSubscriptionPlanDialog } from "./create-subscription-dialog";
+import { DeleteSubscriptionPlanDialog } from "./delete-subscription-plan";
+import { usePermission } from "@/hooks/use-permission";
 
 export function SubscriptionPlanManagement({ initialPlans }) {
   const [plans, setPlans] = useState(initialPlans);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const handleCreatePlan = (plan) => {
-    setPlans([plan, ...plans]);
-    toast.success("Subscription plan created successfully.");
+    selectedPlan
+      ? setPlans(plans.map((p) => (p.id === plan.id ? plan : p)))
+      : setPlans([plan, ...plans]);
+    selectedPlan
+      ? toast.success("Subscription plan updated successfully.")
+      : toast.success("Subscription plan created successfully.");
   };
 
   const handleEditPlan = (plan) => {
     setSelectedPlan(plan);
-    setIsEditOpen(true);
+    setIsCreateOpen(true);
   };
 
   const handleDeletePlan = (plan) => {
     setSelectedPlan(plan);
     setIsDeleteOpen(true);
-  };
-
-  const handlePlanUpdated = (updatedPlan) => {
-    setPlans(plans.map((p) => (p.id === updatedPlan.id ? updatedPlan : p)));
-    toast.error("Subscription plan updated successfully.");
   };
 
   const handlePlanDeleted = (planId) => {
@@ -50,16 +50,18 @@ export function SubscriptionPlanManagement({ initialPlans }) {
 
   const getPlanIcon = (planName) => {
     switch (planName.toLowerCase()) {
-      case "basic":
+      case "foundation":
         return <Home className="h-5 w-5 text-blue-500" />;
-      case "pro":
+      case "growth":
         return <Building className="h-5 w-5 text-purple-500" />;
-      case "enterprise":
+      case "professional":
         return <Crown className="h-5 w-5 text-amber-500" />;
       default:
         return <Home className="h-5 w-5 text-gray-500" />;
     }
   };
+  const canEdit = usePermission("edit:subscription-plan");
+  const canDelete = usePermission("delete:subscription-plan");
 
   return (
     <div className="space-y-6">
@@ -119,18 +121,20 @@ export function SubscriptionPlanManagement({ initialPlans }) {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span>Max Properties</span>
-                    <span className="font-medium">{plan?.maxProperties}</span>
+                    <span className="font-medium">
+                      {plan?.maxPropertiesPerBranch}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span>Additional Branch Price</span>
                     <span className="font-medium">
-                      £{plan?.additionalBranchPrice}
+                      £{plan?.extraBranchPrice}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span>Additional Property</span>
                     <span className="font-medium">
-                      £{plan?.additionalPropertyPrice}
+                      £{plan?.extraPropertyPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -153,22 +157,26 @@ export function SubscriptionPlanManagement({ initialPlans }) {
                 </div>
 
                 <div className="flex gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditPlan(plan)}
-                    className="flex-1"
-                  >
-                    <Edit className="mr-1 h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeletePlan(plan)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditPlan(plan)}
+                      className="flex-1"
+                    >
+                      <Edit className="mr-1 h-3 w-3" />
+                      Edit
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeletePlan(plan)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -180,7 +188,7 @@ export function SubscriptionPlanManagement({ initialPlans }) {
         <CardHeader>
           <CardTitle>All Subscription Plans</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -190,6 +198,7 @@ export function SubscriptionPlanManagement({ initialPlans }) {
                 <TableHead>Max Branches</TableHead>
                 <TableHead>Max Properties</TableHead>
                 <TableHead>Additional Property Price</TableHead>
+                <TableHead>Additional Branch Price</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -206,8 +215,9 @@ export function SubscriptionPlanManagement({ initialPlans }) {
                   <TableCell>£{plan?.monthlyPrice}</TableCell>
                   <TableCell>£{plan?.yearlyPrice}</TableCell>
                   <TableCell>{plan?.maxBranches}</TableCell>
-                  <TableCell>{plan?.maxProperties}</TableCell>
-                  <TableCell>£{plan?.additionalPropertyPrice}</TableCell>
+                  <TableCell>{plan?.maxPropertiesPerBranch}</TableCell>
+                  <TableCell>£{plan?.extraPropertyPrice}</TableCell>
+                  <TableCell>£{plan?.extraBranchPrice}</TableCell>
                   <TableCell>
                     <Badge variant={plan?.isActive ? "default" : "secondary"}>
                       {plan?.isActive ? "Active" : "Inactive"}
@@ -243,7 +253,18 @@ export function SubscriptionPlanManagement({ initialPlans }) {
         open={isCreateOpen}
         onOpenChange={setIsCreateOpen}
         onPlanCreated={handleCreatePlan}
+        initialValues={selectedPlan}
       />
+      {selectedPlan && (
+        <>
+          <DeleteSubscriptionPlanDialog
+            open={isDeleteOpen}
+            onOpenChange={setIsDeleteOpen}
+            plan={selectedPlan}
+            onPlanDeleted={handlePlanDeleted}
+          />
+        </>
+      )}
     </div>
   );
 }
