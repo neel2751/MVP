@@ -3,13 +3,17 @@
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
+  CheckboxInput,
   DatePickerInput,
   DateRangePickerInput,
   DynamicFields,
   FileUploadInput,
+  FormMultipleInput,
   FormMultipleSelect,
+  FormSwitchInput,
   MultiGroupInput,
   SelectInput,
+  TextareaInput,
   TextInput,
 } from "./form-fields";
 import { useDependentOptions } from "@/hooks/use-depedentOptions";
@@ -20,7 +24,7 @@ const fieldTypeMap = {
   number: TextInput,
   password: TextInput,
   tel: TextInput,
-  textarea: TextInput,
+  textarea: TextareaInput,
   select: SelectInput,
   date: DatePickerInput,
   dateRange: DateRangePickerInput,
@@ -28,6 +32,9 @@ const fieldTypeMap = {
   multiGroup: MultiGroupInput,
   dynamic: DynamicFields,
   multipleSelect: FormMultipleSelect,
+  checkbox: CheckboxInput,
+  multipleInput: FormMultipleInput,
+  switch: FormSwitchInput,
 };
 
 function checkConditions(conditions, watchedValues, logic = "AND") {
@@ -39,7 +46,13 @@ function checkConditions(conditions, watchedValues, logic = "AND") {
   return logic === "AND" ? results.every(Boolean) : results.some(Boolean);
 }
 
-export function DynamicForm({ fields = [], defaultValues = {}, onSubmit }) {
+export function DynamicForm({
+  fields = [],
+  defaultValues = {},
+  onSubmit,
+  submitButtonLabel = "Submit",
+  isLoading = false,
+}) {
   const methods = useForm({ mode: "onBlur", defaultValues });
   const { control } = methods;
 
@@ -124,7 +137,9 @@ export function DynamicForm({ fields = [], defaultValues = {}, onSubmit }) {
     <FormProvider {...methods}>
       <form onSubmit={methods.handleSubmit(onSubmit)} className="space-y-6">
         {fields.map(renderField)}
-        <Button type="submit">Submit</Button>
+        <Button disabled={isLoading} isLoading={isLoading} type="submit">
+          {submitButtonLabel}
+        </Button>
       </form>
     </FormProvider>
   );

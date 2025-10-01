@@ -18,6 +18,7 @@ import {
   BaseRadio,
   BaseSearchableSelect,
   BaseSelect,
+  BaseSwitch,
   BaseTextarea,
 } from "./base-fields";
 import { useState } from "react";
@@ -359,6 +360,98 @@ export function FormMultipleSelect({ fieldProps, control }) {
         />
       </FormControl>
       <FormMessage>{fieldState.error?.message}</FormMessage>
+    </FormItem>
+  );
+}
+
+export function FormMultipleInput({ fieldProps, control }) {
+  const { field: inputField, fieldState } = useController({
+    name: fieldProps.name,
+    control: control,
+    rules: fieldProps.validationOptions,
+  });
+
+  const [items, setItems] = useState(inputField.value || []);
+  const [newItem, setNewItem] = useState("");
+
+  const addItem = () => {
+    if (newItem.trim() && items.length < (fieldProps.maxItems || 10)) {
+      // duplicate items are not allowed
+      if (items.includes(newItem.trim())) {
+        setNewItem("");
+        return;
+      }
+      const updatedItems = [...items, newItem.trim()];
+      setItems(updatedItems);
+      inputField.onChange(updatedItems);
+      setNewItem("");
+    }
+  };
+
+  const removeItem = (item) => {
+    const updatedItems = items.filter((i) => i !== item);
+    setItems(updatedItems);
+    inputField.onChange(updatedItems);
+  };
+
+  return (
+    <FormItem>
+      <FormLabel>{fieldProps.label}</FormLabel>
+      <div className="space-y-2">
+        <div className="flex gap-2">
+          <BaseInput
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            placeholder={fieldProps.placeholder || `Add ${fieldProps.label}`}
+            onKeyPress={(e) =>
+              e.key === "Enter" && (e.preventDefault(), addItem())
+            }
+          />
+          <Button type="button" onClick={addItem}>
+            Add
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {items.map((item) => (
+            <span
+              key={item}
+              className="flex items-center gap-1 bg-accent px-2 py-1 rounded-sm text-xs font-medium"
+            >
+              {item}
+              <button
+                type="button"
+                className="ml-1 text-red-500"
+                onClick={() => removeItem(item)}
+              >
+                &times;
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
+      <FormMessage>{fieldState.error?.message}</FormMessage>
+    </FormItem>
+  );
+}
+
+export function FormSwitchInput({ control, name, fieldProps }) {
+  const { field, fieldState } = useController({
+    name,
+    control,
+    rules: fieldProps?.validationOptions,
+  });
+
+  return (
+    <FormItem>
+      <FormLabel>{fieldProps?.label}</FormLabel>
+      <FormControl>
+        <BaseSwitch
+          checked={field.value}
+          onChange={field.onChange}
+          label={fieldProps?.label}
+        />
+      </FormControl>
+      <FormMessage>{fieldState?.error?.message}</FormMessage>
     </FormItem>
   );
 }
