@@ -21,6 +21,8 @@ model User {
   updatedAt    DateTime      @updatedAt
   roles        UserRole[] // links to roles
   companyUsers CompanyUser[]
+
+  AuditLog AuditLog[]
 }
 
 // Roles Table
@@ -69,6 +71,9 @@ model Company {
   domain           String         @unique
   isActive         Boolean        @default(true)
   stripeCustomerId String? // Stripe customer ID
+  planId           String? // current subscription plan ID
+  plan             Plan?    @relation(fields: [planId], references: [id])
+  status           String         @default("active") // active, suspended, canceled
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   branches         Branch[]
@@ -76,12 +81,16 @@ model Company {
   subscriptions    Subscription[]
 
   UserRole UserRole[]
+
+  Invoice Invoice[]
 }
 
 // Branches Table
 model Branch {
   id        String   @id @default(cuid())
   name      String
+  doamin    String?   @unique // subdomain or
+  ownDomain Boolean  @default(false) // true if using own domain
   company   Company  @relation(fields: [companyId], references: [id])
   companyId String
   isActive  Boolean  @default(true)
@@ -107,15 +116,23 @@ model Plan {
   description            String?
   monthlyPrice           Float
   yearlyPrice            Float
-  monthlyStripePlanId    String // Stripe plan ID for monthly subscription
-  yearlyStripePlanId     String // Stripe plan ID for yearly subscription
+  trialPeriodDays        Int?           // number of trial days
+  stripeProductId        String? // Stripe product ID
+  monthlyStripePlanId    String? // Stripe plan ID for monthly subscription
+  yearlyStripePlanId     String? // Stripe plan ID for yearly subscription
   maxBranches            Int
   maxPropertiesPerBranch Int
   extraBranchPrice       Float? // extra charge per branch if exceeding limit
   extraPropertyPrice     Float? // extra charge per property if exceeding limit
+  isActive               Boolean        @default(true)
+  features               String[]       // list of features included in the plan
+  status                 String         @default("active") // active, deprecated, archived, upcoming
+  isDeleted              Boolean        @default(false) // soft delete
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   subscriptions          Subscription[]
+
+  Company Company[]
 }
 
 // Company Subscriptions
@@ -131,4 +148,58 @@ model Subscription {
   isTrial   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  Invoice Invoice[]
+
+  SubscriptionUsage SubscriptionUsage[]
 }
+
+model SubscriptionUsage {
+  id             String       @id @default(cuid())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId String
+  month          Int          // e.g., 1 for January
+  year           Int          // e.g., 2024
+  branchesUsed   Int          @default(0)
+  propertiesUsed Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([subscriptionId, month, year]) // ensure one record per subscription per month
+}
+
+
+model Invoice {
+  id              String   @id @default(cuid())
+  company         Company  @relation(fields: [companyId], references: [id])
+  companyId       String
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+  subscriptionId  String
+  invoiceDate     DateTime
+  dueDate         DateTime
+  amount          Float
+  currency        String
+  status          String // paid, unpaid, overdue
+  stripeInvoiceId String? // Stripe invoice ID
+  pdfUrl          String? // URL to the invoice PDF
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+
+// Audit Logs Table
+model AuditLog {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  action    String   // e.g., "create_user", "delete_company"
+  entity    String   // e.g., "User", "Company"
+  entityId  String   // ID of the affected entity
+  changes   Json?    // optional JSON field to capture changes
+  timestamp DateTime @default(now())
+}
+// Indexes for performance optimization
+// Add indexes on frequently queried fields
+// e.g., email in User, name in Company, status in Subscription
+// You can add more indexes based on your query patterns

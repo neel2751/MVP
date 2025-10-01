@@ -6,12 +6,17 @@ export const useSubmitMutation = ({
   invalidateKey,
   onSuccessMessage,
   onClose,
+  onSuccessUpdate,
 }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
     onSuccess: (response) => {
       if (response?.success) {
+        if (onSuccessUpdate) {
+          onSuccessUpdate(response?.data);
+        }
+
         if (invalidateKey) {
           queryClient.invalidateQueries(invalidateKey, { exact: true });
         }
@@ -20,7 +25,7 @@ export const useSubmitMutation = ({
         }
         onClose();
       } else {
-        throw new Error(response?.message);
+        throw new Error(response?.error || "Something went wrong");
       }
     },
     onError: (error) => {

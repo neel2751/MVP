@@ -94,11 +94,17 @@ export function BaseSelect({
         <SelectValue placeholder={placeholder || "Select an option"} />
       </SelectTrigger>
       <SelectContent>
+        {/* Option come with value and label */}
         {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+        {/* {options.map((opt) => (
           <SelectItem key={opt} value={opt}>
             {opt}
           </SelectItem>
-        ))}
+        ))} */}
       </SelectContent>
     </Select>
   );
@@ -166,7 +172,16 @@ export function BaseSearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
-        <Command>
+        <Command
+          filter={(value, search) => {
+            const item = options.find((item) => item.value === value);
+            if (!item) return 0;
+            if (item.label.toLowerCase().includes(search.toLowerCase()))
+              return 1;
+
+            return 0;
+          }}
+        >
           <CommandInput placeholder="Search..." className="h-9" />
           <CommandList>
             <CommandEmpty>No options found.</CommandEmpty>

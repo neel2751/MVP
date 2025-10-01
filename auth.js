@@ -103,7 +103,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
 
   callbacks: {
-    async jwt({ token, trigger, user }) {
+    async jwt({ token, trigger, user, session }) {
       // When user logs in initially
       if (user) {
         token.id = user.id;

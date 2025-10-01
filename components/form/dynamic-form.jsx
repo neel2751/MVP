@@ -12,6 +12,7 @@ import {
   FormMultipleSelect,
   FormSwitchInput,
   MultiGroupInput,
+  SearchableSelectInput,
   SelectInput,
   TextareaInput,
   TextInput,
@@ -35,6 +36,7 @@ const fieldTypeMap = {
   checkbox: CheckboxInput,
   multipleInput: FormMultipleInput,
   switch: FormSwitchInput,
+  searchSelect: SearchableSelectInput,
 };
 
 function checkConditions(conditions, watchedValues, logic = "AND") {
@@ -59,7 +61,11 @@ export function DynamicForm({
   const renderField = (field) => {
     // dynamic option handling
     const options = useDependentOptions(field, methods);
-    if (field.type === "select" && options.length > 0) {
+    if (
+      field.type === "select" &&
+      field.type === "searchSelect" &&
+      options.length > 0
+    ) {
       field.options = options;
     }
 

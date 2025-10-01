@@ -14,7 +14,7 @@ export default async function Page() {
         </p>
         <p className="mt-4 text-sm text-gray-500">
           User: {session?.user?.email}
-          {JSON.stringify(session.user)}
+          {JSON.stringify(session?.user)}
         </p>
         <SignOutButton />
       </div>
